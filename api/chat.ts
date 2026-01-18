@@ -1,7 +1,7 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { WOODY_SYSTEM_PROMPT } from "../src/constants/systemPrompt";
+// api/chat.ts
+import { WOODY_SYSTEM_PROMPT } from "./systemPrompt.js";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   // Only allow POST
   if (req.method !== "POST") {
     res.status(405).send("Method Not Allowed");
@@ -18,54 +18,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let userMessage = "";
   let conversationHistory: Array<{ role: string; content: string }> = [];
 
-  // Check content type
-  const contentType = req.headers["content-type"] || "";
+  const contentType = req.headers?.["content-type"] || "";
 
-  try {
-    if (contentType.includes("application/json")) {
-      // JSON body
-      const { message, messages } = (req.body ?? {}) as any;
+  if (contentType.includes("application/json")) {
+    const { message, messages } = req.body ?? {};
 
-      if (typeof message === "string") {
-        userMessage = message;
-      } else if (Array.isArray(messages) && messages.length > 0) {
-        // Support full conversation history
-        conversationHistory = messages.filter(
-          (m: { role: string; content: string }) =>
-            m.role === "user" || m.role === "assistant"
-        );
-        userMessage = messages[messages.length - 1]?.content || "";
-      }
-    } else if (contentType.includes("multipart/form-data")) {
-      // FormData - Vercel may have already parsed req.body (depends on how client posts)
-      const body = req.body as any;
+    if (typeof message === "string") {
+      userMessage = message;
+    } else if (Array.isArray(messages) && messages.length > 0) {
+      conversationHistory = messages.filter(
+        (m: any) => m.role === "user" || m.role === "assistant"
+      );
+      userMessage = messages[messages.length - 1]?.content || "";
+    }
+  } else if (contentType.includes("multipart/form-data")) {
+    const body = req.body;
 
-      if (typeof body?.message === "string") {
-        userMessage = body.message;
-      } else if (body?.message) {
-        userMessage = String(body.message);
-      }
+    if (typeof body?.message === "string") userMessage = body.message;
+    else if (body?.message) userMessage = String(body.message);
 
-      // Handle conversation history if provided
-      if (body?.history) {
-        try {
-          conversationHistory = JSON.parse(body.history);
-        } catch {
-          // Ignore parse errors
-        }
-      }
-    } else {
-      // Try to parse as JSON anyway
-      const { message, messages } = (req.body ?? {}) as any;
-
-      if (typeof message === "string") {
-        userMessage = message;
-      } else if (Array.isArray(messages) && messages.length > 0) {
-        userMessage = messages[messages.length - 1]?.content || "";
+    if (body?.history) {
+      try {
+        conversationHistory = JSON.parse(body.history);
+      } catch {
+        // ignore
       }
     }
-  } catch (e) {
-    console.error("Body parse error:", e);
+  } else {
+    // fallback
+    const { message, messages } = req.body ?? {};
+    if (typeof message === "string") userMessage = message;
+    else if (Array.isArray(messages) && messages.length > 0) {
+      userMessage = messages[messages.length - 1]?.content || "";
+    }
   }
 
   if (!userMessage) {
@@ -74,23 +59,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Build messages array for OpenAI
-  const openaiMessages: Array<{
-    role: "system" | "user" | "assistant";
-    content: string;
-  }> = [{ role: "system", content: WOODY_SYSTEM_PROMPT }];
+  const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    { role: "system", content: WOODY_SYSTEM_PROMPT },
+  ];
 
   // Add conversation history if available
   if (conversationHistory.length > 0) {
     for (const msg of conversationHistory) {
       if (msg.role === "user" || msg.role === "assistant") {
-        openaiMessages.push({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        });
+        openaiMessages.push({ role: msg.role, content: msg.content });
       }
     }
   } else {
-    // Just add the current user message
     openaiMessages.push({ role: "user", content: userMessage });
   }
 
@@ -139,48 +119,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Process complete SSE lines
       const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // Keep incomplete line in buffer
+      buffer = lines.pop() || "";
 
       for (const line of lines) {
-        const trimmedLine = line.trim();
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+        if (!trimmed.startsWith("data: ")) continue;
 
-        if (!trimmedLine || trimmedLine === "data: [DONE]") continue;
-
-        if (trimmedLine.startsWith("data: ")) {
-          const jsonStr = trimmedLine.slice(6);
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-
-            if (content) res.write(content);
-          } catch (parseError) {
-            console.error("JSON parse error:", parseError);
-          }
+        const jsonStr = trimmed.slice(6);
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) res.write(content);
+        } catch {
+          // ignore partial chunks
         }
       }
     }
 
     // Process any remaining buffer
-    if (buffer.trim() && buffer.trim() !== "data: [DONE]") {
-      if (buffer.trim().startsWith("data: ")) {
-        try {
-          const parsed = JSON.parse(buffer.trim().slice(6));
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) res.write(content);
-        } catch {
-          // Ignore
-        }
+    const tail = buffer.trim();
+    if (tail && tail !== "data: [DONE]" && tail.startsWith("data: ")) {
+      try {
+        const parsed = JSON.parse(tail.slice(6));
+        const content = parsed.choices?.[0]?.delta?.content;
+        if (content) res.write(content);
+      } catch {
+        // ignore
       }
     }
 
     res.end();
   } catch (error) {
     console.error("Stream error:", error);
-    res.status(500).send(
-      `Stream error: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    res.status(500).send("Server error");
   }
 }

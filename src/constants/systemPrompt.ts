@@ -65,6 +65,9 @@ Type III:
 - ln(x) or inverse trig with dv = 1.
 - Use “over and down” then “straight across”.
 
+After completing an Integration by Parts problem using the tabular method, verify the final answer by comparing it to the known general formula for that IBP type.
+The general formula is used only as a confirmation, never as the primary method.
+
 ========================
 TRIGONOMETRIC SUBSTITUTION
 ========================

@@ -1,0 +1,195 @@
+@import "katex/dist/katex.min.css";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Woody Calculus II — Premium Futuristic Academic Theme
+   Dark charcoal/near-black with neon teal/cyan accents
+   Private professor workspace aesthetic
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Near-black base for premium feel */
+    --background: 220 25% 5%;
+    --foreground: 180 15% 93%;
+
+    --card: 220 22% 7%;
+    --card-foreground: 180 15% 93%;
+
+    --popover: 220 22% 9%;
+    --popover-foreground: 180 15% 93%;
+
+    /* Neon Teal/Cyan Primary — slightly deeper */
+    --primary: 175 80% 45%;
+    --primary-foreground: 220 25% 5%;
+
+    /* User message bubbles — warm subtle contrast */
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 180 12% 88%;
+
+    --muted: 220 18% 14%;
+    --muted-foreground: 220 12% 50%;
+
+    /* Teal accent */
+    --accent: 175 65% 38%;
+    --accent-foreground: 180 15% 98%;
+
+    --destructive: 0 65% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 16%;
+    --input: 220 22% 10%;
+    --ring: 175 80% 45%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar — deeper, more refined */
+    --sidebar-background: 220 28% 4%;
+    --sidebar-foreground: 180 12% 80%;
+    --sidebar-primary: 175 80% 45%;
+    --sidebar-primary-foreground: 220 25% 5%;
+    --sidebar-accent: 220 22% 10%;
+    --sidebar-accent-foreground: 175 65% 55%;
+    --sidebar-border: 220 20% 12%;
+    --sidebar-ring: 175 80% 45%;
+
+    /* Custom Woody tokens */
+    --neon-glow: 175 80% 45%;
+    --neon-subtle: 175 55% 30%;
+    --surface-elevated: 220 22% 9%;
+    --surface-hover: 220 20% 13%;
+    --text-dim: 220 12% 40%;
+    --grid-line: 220 18% 10%;
+    
+    /* Premium accent colors */
+    --professor-gold: 45 70% 50%;
+    --math-cyan: 185 75% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01", "ss02", "cv01";
+    letter-spacing: -0.01em;
+  }
+
+  /* Custom scrollbar — more subtle */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer utilities {
+  /* Subtle grid texture */
+  .bg-grid-texture {
+    background-image: 
+      linear-gradient(hsl(var(--grid-line) / 0.25) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-line) / 0.25) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Refined circuit texture */
+  .bg-circuit-texture {
+    background-image: 
+      radial-gradient(ellipse at 20% 30%, hsl(var(--neon-glow) / 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 70%, hsl(var(--neon-glow) / 0.02) 0%, transparent 60%);
+  }
+
+  /* Premium neon glow */
+  .neon-glow {
+    box-shadow: 
+      0 0 4px hsl(var(--neon-glow) / 0.4),
+      0 0 16px hsl(var(--neon-glow) / 0.2),
+      0 0 32px hsl(var(--neon-glow) / 0.08);
+  }
+
+  .neon-glow-subtle {
+    box-shadow: 
+      0 0 8px hsl(var(--neon-glow) / 0.12),
+      0 0 24px hsl(var(--neon-glow) / 0.06);
+  }
+
+  .neon-text-glow {
+    text-shadow: 
+      0 0 8px hsl(var(--neon-glow) / 0.6),
+      0 0 16px hsl(var(--neon-glow) / 0.3);
+  }
+
+  .neon-border {
+    border-color: hsl(var(--neon-glow) / 0.4);
+    box-shadow: 
+      inset 0 0 8px hsl(var(--neon-glow) / 0.08),
+      0 0 8px hsl(var(--neon-glow) / 0.08);
+  }
+
+  /* Glass morphism — refined */
+  .glass {
+    background: hsl(var(--card) / 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.4);
+  }
+
+  /* Professional button style */
+  .btn-professional {
+    @apply font-medium tracking-tight;
+    background: linear-gradient(180deg, hsl(var(--surface-elevated)) 0%, hsl(var(--card)) 100%);
+    border: 1px solid hsl(var(--border));
+    box-shadow: 
+      inset 0 1px 0 hsl(var(--foreground) / 0.04),
+      0 1px 2px hsl(var(--background) / 0.5);
+  }
+
+  .btn-professional:hover {
+    background: linear-gradient(180deg, hsl(var(--surface-hover)) 0%, hsl(var(--surface-elevated)) 100%);
+    border-color: hsl(var(--border) / 1.2);
+  }
+}
+
+/* KaTeX styling — refined for dark theme */
+.katex {
+  font-size: 1.05em;
+  color: hsl(var(--foreground));
+}
+
+.katex .base {
+  color: inherit;
+}
+
+/* Message bubble KaTeX — more refined */
+.message-content .katex-display {
+  margin: 0.875rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.75rem 1rem;
+  background: hsl(var(--background) / 0.6);
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.message-content .katex-display .katex {
+  color: hsl(var(--math-cyan));
+}

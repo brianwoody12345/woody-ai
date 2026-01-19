@@ -1,96 +1,128 @@
-// api/chat.js
-import { WOODY_SYSTEM_PROMPT } from "./systemPrompt.js";
+const WOODY_SYSTEM_PROMPT = `Woody Calculus — Private Professor
+
+You are the Woody Calculus AI Clone.
+You mimic Professor Woody.
+
+Tone: calm, confident, instructional.
+Occasionally (sparingly) use phrases like:
+"Perfect practice makes perfect."
+"Repetition builds muscle memory."
+"This is a good problem to practice a few times."
+Never overuse coaching language or interrupt algebra.
+
+GLOBAL RULES
+Always classify internally; never announce classification
+Never guess a method or mix methods
+Always show setup before computation
+Match bounds to the variable
+Stop immediately when divergence is proven
+End indefinite integrals with + C
+
+METHOD SELECTION (INTERNAL ONLY)
+Route silently to:
+Series
+Integration techniques
+Applications of integration
+Never explain why a method was rejected — only why the chosen method applies.
+
+TECHNIQUES OF INTEGRATION
+Integration by Parts (IBP)
+Tabular method ONLY
+Formula ∫u dv = uv − ∫v du is forbidden
+
+Type I: Polynomial × trig/exponential → Polynomial in u, stop when derivative = 0
+Type II: Exponential × trig → Continue until original integral reappears, move left, solve
+Type III: ln(x) or inverse trig → Force IBP with dv = 1
+
+Trigonometric Substitution
+Allowed forms only:
+√(a² − x²) → x = a sinθ
+√(x² + a²) → x = a tanθ
+√(x² − a²) → x = a secθ
+Always identify type first. Always convert back to x.
+
+SERIES
+Always start with Test for Divergence
+If lim aₙ ≠ 0 → diverges immediately
+
+You are a private professor, not a calculator.
+Structure first. Repetition builds mastery.
+
+OUTPUT FORMAT RULES (CRITICAL)
+- All math MUST be in LaTeX format
+- Use $...$ for inline math
+- Use $$...$$ for display/block math
+- Do NOT use Unicode superscripts like x². Always use LaTeX: $x^2$
+- End every indefinite integral with + C
+- Tables must use markdown table format with | separators
+`;
 
 export default async function handler(req, res) {
-  // Only allow POST
-  if (req.method !== "POST") {
-    res.status(405).send("Method Not Allowed");
-    return;
-  }
-
-  // Check for API key
-  if (!process.env.OPENAI_API_KEY) {
-    res.status(500).send("Missing OPENAI_API_KEY");
-    return;
-  }
-
-  // Parse request body - handle both JSON and FormData
-  let userMessage = "";
-  let conversationHistory = [];
-
-  const contentType = req.headers?.["content-type"] || "";
-
-  if (contentType.includes("application/json")) {
-    const { message, messages } = req.body ?? {};
-
-    if (typeof message === "string") {
-      userMessage = message;
-    } else if (Array.isArray(messages) && messages.length > 0) {
-      conversationHistory = messages.filter(
-        (m) => m.role === "user" || m.role === "assistant"
-      );
-      userMessage = messages[messages.length - 1]?.content || "";
-    }
-  } else if (contentType.includes("multipart/form-data")) {
-    const body = req.body ?? {};
-
-    if (typeof body?.message === "string") userMessage = body.message;
-    else if (body?.message) userMessage = String(body.message);
-
-    if (body?.history) {
-      try {
-        conversationHistory = JSON.parse(body.history);
-      } catch {
-        // ignore
-      }
-    }
-  } else {
-    // fallback
-    const { message, messages } = req.body ?? {};
-    if (typeof message === "string") userMessage = message;
-    else if (Array.isArray(messages) && messages.length > 0) {
-      userMessage = messages[messages.length - 1]?.content || "";
-    }
-  }
-
-  if (!userMessage) {
-    res.status(400).send("Missing message");
-    return;
-  }
-
-  // Build messages array for OpenAI
-  const openaiMessages = [{ role: "system", content: WOODY_SYSTEM_PROMPT }];
-
-  // Add conversation history if available
-  if (conversationHistory.length > 0) {
-    for (const msg of conversationHistory) {
-      if (msg.role === "user" || msg.role === "assistant") {
-        openaiMessages.push({ role: msg.role, content: msg.content });
-      }
-    }
-  } else {
-    openaiMessages.push({ role: "user", content: userMessage });
-  }
-
   try {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      res.status(500).send("Missing OPENAI_API_KEY");
+      return;
+    }
+
+    const contentType = req.headers?.["content-type"] || "";
+    let userMessage = "";
+    let conversationHistory = [];
+
+    if (contentType.includes("application/json")) {
+      const body = req.body || {};
+      const { message, messages } = body;
+
+      if (typeof message === "string") {
+        userMessage = message;
+      } else if (Array.isArray(messages) && messages.length > 0) {
+        conversationHistory = messages.filter(
+          (m) => m.role === "user" || m.role === "assistant"
+        );
+        userMessage = messages[messages.length - 1]?.content || "";
+      }
+    } else {
+      // fallback
+      const body = req.body || {};
+      if (typeof body.message === "string") userMessage = body.message;
+    }
+
+    if (!userMessage) {
+      res.status(400).send("Missing message");
+      return;
+    }
+
+    const openaiMessages = [{ role: "system", content: WOODY_SYSTEM_PROMPT }];
+
+    if (conversationHistory.length > 0) {
+      for (const m of conversationHistory) {
+        openaiMessages.push({ role: m.role, content: m.content });
+      }
+    } else {
+      openaiMessages.push({ role: "user", content: userMessage });
+    }
+
     const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         model: "gpt-4o-2024-08-06",
         temperature: 0,
         stream: true,
-        messages: openaiMessages,
-      }),
+        messages: openaiMessages
+      })
     });
 
     if (!upstream.ok) {
-      const errorText = await upstream.text().catch(() => "Unknown error");
-      console.error("OpenAI API error:", upstream.status, errorText);
-      res.status(upstream.status).send(`OpenAI API error: ${errorText}`);
+      const errText = await upstream.text().catch(() => "Unknown error");
+      res.status(upstream.status).send(errText);
       return;
     }
 
@@ -99,7 +131,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Set headers for streaming
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -114,42 +145,26 @@ export default async function handler(req, res) {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-
-      // Process complete SSE lines
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === "data: [DONE]") continue;
-        if (!trimmed.startsWith("data: ")) continue;
+        const t = line.trim();
+        if (!t || t === "data: [DONE]") continue;
+        if (!t.startsWith("data: ")) continue;
 
-        const jsonStr = trimmed.slice(6);
         try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) res.write(content);
+          const parsed = JSON.parse(t.slice(6));
+          const chunk = parsed.choices?.[0]?.delta?.content;
+          if (chunk) res.write(chunk);
         } catch {
-          // ignore partial chunks
+          // ignore partials
         }
       }
     }
 
-    // Process any remaining buffer
-    const tail = buffer.trim();
-    if (tail && tail !== "data: [DONE]" && tail.startsWith("data: ")) {
-      try {
-        const parsed = JSON.parse(tail.slice(6));
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) res.write(content);
-      } catch {
-        // ignore
-      }
-    }
-
     res.end();
-  } catch (err) {
-    console.error("Stream error:", err);
-    res.status(500).send("Server error");
+  } catch (e) {
+    res.status(500).send(`Server error: ${e?.message || String(e)}`);
   }
 }

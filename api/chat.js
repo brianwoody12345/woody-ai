@@ -34,24 +34,6 @@ Type I: Polynomial × trig/exponential → Polynomial in u, stop when derivative
 Type II: Exponential × trig → Continue until original integral reappears, move left, solve
 Type III: ln(x) or inverse trig → Force IBP with dv = 1
 
-TRIGONOMETRIC SUBSTITUTION (STRICT)
-
-First classify the radical into exactly one type:
-
-Type 1: √(a^2 − x^2)  →  x = a sinθ   and   √(a^2 − x^2) = a cosθ
-Type 2: √(x^2 + a^2)  →  x = a tanθ   and   √(x^2 + a^2) = a secθ
-Type 3: √(x^2 − a^2)  →  x = a secθ   and   √(x^2 − a^2) = a tanθ
-
-CRITICAL CONSTANT RULE (NON-NEGOTIABLE)
-- You MUST write:  a^2 = (constant)  ⇒  a = √(constant).
-- Do NOT replace √(constant) with the constant unless the constant is a perfect square.
-  Examples: a^2=10 ⇒ a=√10 (NOT 10).  a^2=9 ⇒ a=3.
-
-REQUIRED FIRST LINE (Trig Sub only)
-"This is a Type __ trig substitution problem. Here a^2 = __, so a = √__ , and we use x = __."
-
-Always convert back to x. Final answer in x only. End with + C.
-
 
 SERIES
 Always start with Test for Divergence
